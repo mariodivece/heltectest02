@@ -4,14 +4,15 @@
 #include <WiFi.h>
 #include "oled/SSD1306Wire.h"
 
-#define CORE_ID_AUTO -1
-#define STACK_SIZE_DEFAULT 2048
+#define AUTO_CPU_NUM -1
+#define STACK_SIZE_DEFAULT 8192
 
 class ProgramState {
 
 public:
     int LoopCount;
     String* StatusMessage;
+    String* WiFiStatusMessage;
     SSD1306Wire* Display;
     
 private:

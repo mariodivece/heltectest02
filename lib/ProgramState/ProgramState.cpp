@@ -5,17 +5,23 @@ ProgramState::ProgramState() {
     LoopCount = 0;
 
     StatusMessage = new String();
-    StatusMessage->reserve(512);
+    StatusMessage->reserve(64);
+
+    WiFiStatusMessage = new String();
+    WiFiStatusMessage->reserve(64);
 
     SyncRoot = xSemaphoreCreateBinary();
     xSemaphoreGive(SyncRoot);
 }
 
 ProgramState::~ProgramState() {
-    if (IsPendingShutdown) return;
+    
+    if (IsPendingShutdown)
+        return;
 
     IsPendingShutdown = true;
     delete StatusMessage;
+    delete WiFiStatusMessage;
     Display->displayOff();
     Display->end();
     delete Display;
@@ -25,9 +31,9 @@ ProgramState::~ProgramState() {
 void ProgramState::begin() {
     Display = createDisplay();
     
-    xTaskCreateUniversal(BlinkTask, "BlinkTask", STACK_SIZE_DEFAULT, this, 1, &BlinkTaskHandle, APP_CPU_NUM);
-    xTaskCreateUniversal(DisplayTask, "DisplayTask", STACK_SIZE_DEFAULT, this, 2, &DisplayTaskHandle, APP_CPU_NUM);
-    xTaskCreateUniversal(WirelessTask, "WirelessTask", 4096, this, 3, &WirelessTaskHandle, PRO_CPU_NUM);
+    xTaskCreateUniversal(BlinkTask, "BlinkTask", STACK_SIZE_DEFAULT, this, 1, &BlinkTaskHandle, AUTO_CPU_NUM);
+    xTaskCreateUniversal(DisplayTask, "DisplayTask", STACK_SIZE_DEFAULT, this, 2, &DisplayTaskHandle, AUTO_CPU_NUM);
+    xTaskCreateUniversal(WirelessTask, "WirelessTask", STACK_SIZE_DEFAULT, this, 3, &WirelessTaskHandle, AUTO_CPU_NUM);
 }
 
 void ProgramState::lockWait() {
@@ -60,14 +66,11 @@ void ProgramState::BlinkTask(void* argument) {
 
     while(!instance->IsPendingShutdown)
     {
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(1000));
         digitalWrite(LED_BUILTIN, ledState);
         ledState = !ledState;
         instance->lockWait();
         instance->LoopCount++;
-        instance->StatusMessage->clear();
-        instance->StatusMessage->concat("Current Count: ");
-        instance->StatusMessage->concat(instance->LoopCount);
         instance->lockRelease();
     }
 
@@ -85,7 +88,13 @@ void ProgramState::DisplayTask(void* argument) {
         vTaskDelay(pdMS_TO_TICKS(100));
         instance->lockWait();
         instance->Display->clear();
+
+        instance->StatusMessage->clear();
+        instance->StatusMessage->concat("Current Count: ");
+        instance->StatusMessage->concat(instance->LoopCount);
         instance->Display->drawString(0, 10, *(instance->StatusMessage));
+        instance->Display->drawString(0, 20, *(instance->WiFiStatusMessage));
+        
         instance->lockRelease();
         instance->Display->display();
     }
@@ -95,31 +104,33 @@ void ProgramState::DisplayTask(void* argument) {
 
 void ProgramState::WirelessTask(void* argument) {
     auto instance = (ProgramState*)argument;
+
     WiFi.setAutoConnect(true);
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(WIFI_PS_NONE); // disable power saving for WiFi, as enabling it makes comms unreliable.
     WiFi.begin("Highbird", "74a42f28a1");
     instance->lockWait();
-    instance->StatusMessage->clear();
-    instance->StatusMessage->concat("Connecting . . .");
+    instance->WiFiStatusMessage->clear();
+    instance->WiFiStatusMessage->concat("Connecting . . .");
     instance->lockRelease();
 
     auto status = WiFi.waitForConnectResult();
     
     instance->lockWait();
-    instance->StatusMessage->clear();
-    instance->StatusMessage->concat("Connection result complete");
+    instance->WiFiStatusMessage->clear();
+    instance->WiFiStatusMessage->concat("Connection result complete");
     instance->lockRelease();
 
     while (!instance->IsPendingShutdown)
     {
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(1000));
         status = WiFi.status();
         instance->lockWait();
-        instance->StatusMessage->clear();
+        instance->WiFiStatusMessage->clear();
         if (status == WL_CONNECTED) {
-            instance->StatusMessage->concat(WiFi.localIP().toString());
+            instance->WiFiStatusMessage->concat(WiFi.localIP().toString());
         } else {
-            instance->StatusMessage->concat("WiFi Unavaliable");
+            instance->WiFiStatusMessage->concat("WiFi Unavaliable");
         }
         
         instance->lockRelease();
