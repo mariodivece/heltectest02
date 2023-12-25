@@ -4,9 +4,10 @@ using namespace std;
 ProgramState program;
 
 void setup() {
-  program.begin();
+    program.begin();
 }
 
 void loop() {
-
+    // placeholder for arduino framework
+    // this program is based on asynchronous tasks.
 }
