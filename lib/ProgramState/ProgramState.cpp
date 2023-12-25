@@ -12,6 +12,7 @@ ProgramState::ProgramState() {
 }
 
 void ProgramState::begin() {
+    Display = createDisplay();
     xTaskCreateUniversal(BlinkTask, "BlinkTask", STACK_SIZE_DEFAULT, this, 1, &BlinkTaskHandle, CORE_ID_AUTO);
     xTaskCreateUniversal(DisplayTask, "DisplayTask", STACK_SIZE_DEFAULT, this, 2, &DisplayTaskHandle, CORE_ID_AUTO);
 }
@@ -25,9 +26,20 @@ void ProgramState::lockRelease() {
     xSemaphoreGive(SyncRoot);
 }
 
+SSD1306Wire* ProgramState::createDisplay() {
+    auto display = new SSD1306Wire(0x3c, SDA_OLED, SCL_OLED, RST_OLED, GEOMETRY_128_64);
+    display->init();
+    display->flipScreenVertically();
+    display->setFont(ArialMT_Plain_10);
+    display->setBrightness(128);
+    display->clear();
+
+    return display;
+}
+
 void ProgramState::BlinkTask(void* argument)
 {
-    ProgramState* instance = (ProgramState*)argument;
+    auto instance = (ProgramState*)argument;
     pinMode(LED_BUILTIN, OUTPUT);
     bool ledState = true;
 
@@ -46,11 +58,11 @@ void ProgramState::BlinkTask(void* argument)
 
 void ProgramState::DisplayTask(void* argument)
 {
-    ProgramState* instance = (ProgramState*)argument;
+    auto instance = (ProgramState*)argument;
     int currentCount;
 
-    Heltec.display->setFont(ArialMT_Plain_10);
-    Heltec.display->setTextAlignment(TEXT_ALIGN_LEFT);
+    instance->Display->setFont(ArialMT_Plain_10);
+    instance->Display->setTextAlignment(TEXT_ALIGN_LEFT);
 
     while (true)
     {
@@ -59,10 +71,10 @@ void ProgramState::DisplayTask(void* argument)
         instance->StatusMessage->clear();
         instance->StatusMessage->concat("Current Count: ");
         instance->StatusMessage->concat(instance->LoopCount);
-        Heltec.display->clear();
-        Heltec.display->drawString(0, 10, *(instance->StatusMessage));
+        instance->Display->clear();
+        instance->Display->drawString(0, 10, *(instance->StatusMessage));
         instance->lockRelease();
-        Heltec.display->display();
+        instance->Display->display();
         vTaskDelay(pdMS_TO_TICKS(25));
     }
 

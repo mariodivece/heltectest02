@@ -10,7 +10,8 @@ class ProgramState {
 public:
     int LoopCount;
     String* StatusMessage;
-
+    SSD1306Wire* Display;
+    
 private:
     SemaphoreHandle_t SyncRoot;
     TaskHandle_t BlinkTaskHandle;
@@ -32,6 +33,10 @@ public:
     void lockRelease();
 
 private:
+
+    /// @brief Creates an OLED display object
+    /// @return A display object 
+    static SSD1306Wire* createDisplay();
 
     /// @brief Implementation logic for the blinking LED
     /// @param argument Must contain the ProgramState instance.
