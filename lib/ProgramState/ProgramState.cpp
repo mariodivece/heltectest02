@@ -74,7 +74,7 @@ void ProgramState::BlinkTask(void* argument) {
         instance->lockRelease();
     }
 
-    vTaskDelete(instance->BlinkTaskHandle);
+    vTaskDelete(nullptr);
 }
 
 void ProgramState::DisplayTask(void* argument) {
@@ -99,7 +99,7 @@ void ProgramState::DisplayTask(void* argument) {
         instance->Display->display();
     }
 
-    vTaskDelete(instance->DisplayTaskHandle);
+    vTaskDelete(nullptr);
 }
 
 void ProgramState::WirelessTask(void* argument) {
@@ -136,5 +136,5 @@ void ProgramState::WirelessTask(void* argument) {
         instance->lockRelease();
     }
 
-    vTaskDelete(instance->WirelessTaskHandle);
+    vTaskDelete(nullptr);
 }
