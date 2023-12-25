@@ -1,6 +1,7 @@
-#ifndef ProgramState_hh
-#include <Arduino.h>
-#include "heltec.h"
+#pragma once
+
+#include <SPI.h>
+#include "oled/SSD1306Wire.h"
 
 #define CORE_ID_AUTO -1
 #define STACK_SIZE_DEFAULT 2048
@@ -46,5 +47,3 @@ private:
     /// @param argument Must contain the ProgramState instance.
     static void DisplayTask(void* argument);
 };
-
-#endif
