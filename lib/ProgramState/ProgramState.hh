@@ -11,7 +11,7 @@ class ProgramState {
 
 public:
     int LoopCount;
-    String* StatusMessage;
+    String* LoopStatusMessage;
     String* WiFiStatusMessage;
     SSD1306Wire* Display;
     
@@ -57,4 +57,8 @@ private:
     /// @brief Implementation logic for wireless connection.
     /// @param argument Must contain the ProgramState instance.
     static void WirelessTask(void* arguemnt);
+
+    void updateLoopStatusMessage();
+
+    void setWiFiStatusMessage(const char* cstr);
 };

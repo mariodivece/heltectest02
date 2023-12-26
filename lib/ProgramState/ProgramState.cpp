@@ -4,8 +4,8 @@ ProgramState::ProgramState() {
     IsPendingShutdown = false;
     LoopCount = 0;
 
-    StatusMessage = new String();
-    StatusMessage->reserve(64);
+    LoopStatusMessage = new String();
+    LoopStatusMessage->reserve(64);
 
     WiFiStatusMessage = new String();
     WiFiStatusMessage->reserve(64);
@@ -17,7 +17,7 @@ ProgramState::~ProgramState() {
         return;
 
     IsPendingShutdown = true;
-    delete StatusMessage;
+    delete LoopStatusMessage;
     delete WiFiStatusMessage;
     Display->displayOff();
     Display->end();
@@ -33,7 +33,7 @@ void ProgramState::begin() {
 
     xTaskCreateUniversal(BlinkTask, "BlinkTask", STACK_SIZE_DEFAULT, this, 1, &BlinkTaskHandle, AUTO_CPU_NUM);
     xTaskCreateUniversal(DisplayTask, "DisplayTask", STACK_SIZE_DEFAULT, this, 2, &DisplayTaskHandle, AUTO_CPU_NUM);
-    xTaskCreateUniversal(WirelessTask, "WirelessTask", STACK_SIZE_DEFAULT, this, 3, &WirelessTaskHandle, AUTO_CPU_NUM);
+    xTaskCreateUniversal(WirelessTask, "WirelessTask", STACK_SIZE_DEFAULT, this, 3, &WirelessTaskHandle, PRO_CPU_NUM);
 }
 
 void ProgramState::lockWait() {
@@ -86,16 +86,13 @@ void ProgramState::DisplayTask(void* argument) {
     while (!instance->IsPendingShutdown)
     {
         vTaskDelay(pdMS_TO_TICKS(500));
-        instance->lockWait();
+        instance->updateLoopStatusMessage();
         instance->Display->clear();
-
-        instance->StatusMessage->clear();
-        instance->StatusMessage->concat("Current Count: ");
-        instance->StatusMessage->concat(instance->LoopCount);
-        instance->Display->drawString(0, 10, *(instance->StatusMessage));
+        instance->lockWait();
+        instance->Display->drawString(0, 10, *(instance->LoopStatusMessage));
         instance->Display->drawString(0, 20, *(instance->WiFiStatusMessage));
-        
         instance->lockRelease();
+
         instance->Display->display();
     }
 
@@ -105,35 +102,26 @@ void ProgramState::DisplayTask(void* argument) {
 void ProgramState::WirelessTask(void* argument) {
     auto instance = (ProgramState*)argument;
 
-    WiFi.setAutoConnect(true);
+    WiFi.setAutoReconnect(true);
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(WIFI_PS_NONE); // disable power saving for WiFi, as enabling it makes comms unreliable.
     WiFi.begin("Highbird", "74a42f28a1");
-    instance->lockWait();
-    instance->WiFiStatusMessage->clear();
-    instance->WiFiStatusMessage->concat("Connecting . . .");
-    instance->lockRelease();
-
-    auto status = WiFi.waitForConnectResult();
     
-    instance->lockWait();
-    instance->WiFiStatusMessage->clear();
-    instance->WiFiStatusMessage->concat("Connection result complete");
-    instance->lockRelease();
+    instance->setWiFiStatusMessage("Connecting . . . ");
+    auto status = WiFi.waitForConnectResult();
+    instance->setWiFiStatusMessage("Connection result completed");
 
     while (!instance->IsPendingShutdown)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
         status = WiFi.status();
-        instance->lockWait();
-        instance->WiFiStatusMessage->clear();
+
         if (status == WL_CONNECTED) {
-            instance->WiFiStatusMessage->concat(WiFi.localIP().toString());
+            instance->setWiFiStatusMessage(WiFi.localIP().toString().c_str());
         } else {
-            instance->WiFiStatusMessage->concat("WiFi Unavaliable");
+            instance->setWiFiStatusMessage("WiFi Unavailable");
         }
-        
-        instance->lockRelease();
+
         if (status == WL_CONNECTED) {
             break;
         }
@@ -141,3 +129,22 @@ void ProgramState::WirelessTask(void* argument) {
 
     vTaskDelete(nullptr);
 }
+
+void ProgramState::updateLoopStatusMessage() {
+    lockWait();
+    LoopStatusMessage->clear();
+    LoopStatusMessage->concat("Current Count: ");
+    LoopStatusMessage->concat(LoopCount);
+    lockRelease();
+}
+
+void ProgramState::setWiFiStatusMessage(const char* cstr) {
+    lockWait();
+    WiFiStatusMessage->clear();
+    if (cstr) {
+        WiFiStatusMessage->concat(cstr);
+    }
+
+    lockRelease();
+}
+
