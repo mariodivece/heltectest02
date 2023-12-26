@@ -39,7 +39,7 @@ void ProgramState::begin() {
 void ProgramState::lockWait() {
     // TODO: use ulTaskNotifyTake instead
     while (!IsPendingShutdown && xSemaphoreTake(SyncRoot, portMAX_DELAY) == pdFALSE) {
-        // empty loop
+        NOP();
     }
 }
 
@@ -111,19 +111,57 @@ void ProgramState::WirelessTask(void* argument) {
     auto status = WiFi.waitForConnectResult();
     instance->setWiFiStatusMessage("Connection result completed");
 
-    while (!instance->IsPendingShutdown)
-    {
+    while (!instance->IsPendingShutdown) {
         vTaskDelay(pdMS_TO_TICKS(1000));
         status = WiFi.status();
 
         if (status == WL_CONNECTED) {
             instance->setWiFiStatusMessage(WiFi.localIP().toString().c_str());
+            break;
         } else {
             instance->setWiFiStatusMessage("WiFi Unavailable");
         }
+    }
 
-        if (status == WL_CONNECTED) {
-            break;
+    WiFiServer httpServer;
+    ulong currentTime = millis();
+    ulong previousTime = 0;
+    const ulong timeout = 2000; //ms.
+    
+    httpServer.begin(80);
+
+    while (!instance->IsPendingShutdown) {
+        WiFiClient client = httpServer.available();
+        
+        String readBuffer;
+        readBuffer.reserve(4);
+
+        const int MaxHeaderCount = 16;
+        String httpHeaders[MaxHeaderCount];
+        String httpBody;
+        int currentHeaderIndex = 0;
+        bool isReadingHeaders = true;
+
+        if (!client) continue;
+        currentTime = millis();
+        previousTime = currentTime;
+
+        while (client.connected() && currentTime - previousTime <= timeout) {
+            currentTime = millis();
+
+            if (client.available()) {
+                char readChar = client.read();
+
+                if (isReadingHeaders) {
+                    if (readChar == '\r') continue;
+
+                }
+
+                if (httpHeaders[currentHeaderIndex].endsWith("\n") && && )
+                httpHeader += readChar;
+                // TODO NOT BUILDING!!!
+                
+            }
         }
     }
 

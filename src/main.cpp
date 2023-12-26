@@ -9,4 +9,5 @@ void setup() {
 
 void loop() {
     // nothing to be run here.
+    NOP();
 }
