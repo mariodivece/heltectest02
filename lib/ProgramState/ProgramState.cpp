@@ -134,6 +134,9 @@ void ProgramState::WirelessTask(void* argument) {
         }
         
         instance->lockRelease();
+        if (status == WL_CONNECTED) {
+            break;
+        }
     }
 
     vTaskDelete(nullptr);

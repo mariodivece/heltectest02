@@ -8,6 +8,5 @@ void setup() {
 }
 
 void loop() {
-    // placeholder for arduino framework
-    // this program is based on asynchronous tasks.
+    // nothing to be run here.
 }
