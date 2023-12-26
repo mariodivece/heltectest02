@@ -9,9 +9,6 @@ ProgramState::ProgramState() {
 
     WiFiStatusMessage = new String();
     WiFiStatusMessage->reserve(64);
-
-    SyncRoot = xSemaphoreCreateBinary();
-    xSemaphoreGive(SyncRoot);
 }
 
 ProgramState::~ProgramState() {
@@ -31,6 +28,9 @@ ProgramState::~ProgramState() {
 void ProgramState::begin() {
     Display = createDisplay();
     
+    SyncRoot = xSemaphoreCreateBinary();
+    xSemaphoreGive(SyncRoot);
+
     xTaskCreateUniversal(BlinkTask, "BlinkTask", STACK_SIZE_DEFAULT, this, 1, &BlinkTaskHandle, AUTO_CPU_NUM);
     xTaskCreateUniversal(DisplayTask, "DisplayTask", STACK_SIZE_DEFAULT, this, 2, &DisplayTaskHandle, AUTO_CPU_NUM);
     xTaskCreateUniversal(WirelessTask, "WirelessTask", STACK_SIZE_DEFAULT, this, 3, &WirelessTaskHandle, AUTO_CPU_NUM);
@@ -66,7 +66,7 @@ void ProgramState::BlinkTask(void* argument) {
 
     while(!instance->IsPendingShutdown)
     {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
         digitalWrite(LED_BUILTIN, ledState);
         ledState = !ledState;
         instance->lockWait();
@@ -85,7 +85,7 @@ void ProgramState::DisplayTask(void* argument) {
 
     while (!instance->IsPendingShutdown)
     {
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(500));
         instance->lockWait();
         instance->Display->clear();
 
